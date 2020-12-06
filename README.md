@@ -1,8 +1,6 @@
 # Simple testing framework for node.js
 
-This is a simple, sequential, exception based test runner for node. It - by design - just
-scratches the feature surface of
-[giants](https://www.google.com/search?q=top+testing+framworks+for+node+js&oq=testing+framworks+for+node+js).
+Simple, sequential, exception based test runner for node js.
 
 Main motivation: simplicity.
 
@@ -14,7 +12,7 @@ Main motivation: simplicity.
 - speed
 - timeout checks
 
-#### Intentionaly absent features
+#### Intentionally absent features
 
 - parallel testing
 - assertions ([tip](https://nodejs.org/api/assert.html))
@@ -64,8 +62,10 @@ $ nodemon -q tests -- [-v] [whitelist]
 ```
 looks as a good enough CLI for me.
 
+#### How to `TestRunner.runAll([dirs], options)` ?
+
 The `TestRunner.runAll` looks by default for `[<path>/]<file>.test.[tj]s`. Each test file must
-have the suite instance "default exported", e.g.:
+have the suite instance "default exported":
 
 ```js
 // src/some.test.js
@@ -75,7 +75,7 @@ const suite = new TestRunner('My suite');
 
 export default suite;
 // or depending on your env:
-module.exports = suite;
+// module.exports = suite;
 ```
 
 See [examples](examples/) for more.
@@ -101,9 +101,11 @@ which can lead to unexpected results.
 
 ## Browser support
 
-Not really planned, but with few hacks (conditionally wrap `process.` calls) it should work in brower too.
+Not really planned, but with just a few hacks (conditionally wrap `process.` calls) it should
+work in browser too.
 
 ## Todo (maybe)
 
-Describe full api options... until then, check the [definition file](./dist/index.d.ts).
+Describe full api options... Until then, check the [definition](./dist/index.d.ts)
+[files](./dist/renderer.d.ts).
 

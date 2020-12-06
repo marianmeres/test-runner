@@ -26,8 +26,8 @@ suite.todo('To be implemented');
 // BUT, this can get tricky... read more in README.md
 // prettier-ignore
 suite.test('Too late Marlene', async () => {
-	await new Promise((res) => setTimeout(res, 20));
-}, 10);
+	await new Promise((res) => setTimeout(res, 10));
+}, 5);
 
 // run suite if this file is executed directly
 // like python's: if __name__ == "__main__":

@@ -1,3 +1,29 @@
+export interface RenderData {
+    suiteName: string;
+    type: string;
+    label: string;
+    error: Error;
+    duration: number;
+}
+interface Render {
+    verbose: boolean;
+    suiteName: (opts: Partial<RenderData>) => void;
+    result: (opts: Partial<RenderData>) => void;
+    stats: (opts: Partial<RenderData>, prefix?: string) => void;
+    runAllTitle: ({ whitelist }: {
+        whitelist: any;
+    }) => void;
+    runAllSuiteError: ({ error, name }: {
+        error: any;
+        name: any;
+    }) => void;
+    runAllStats: (stats: any) => void;
+    runAllErrorsSummary: ({ errorDetails, invalid }: {
+        errorDetails: any;
+        invalid: any;
+    }) => void;
+    log: (type: any, str: any) => void;
+}
 /**
  * Simple testing framework. Basic usage:
  *
@@ -21,6 +47,7 @@ export declare class TestRunner {
         errorExitOnFirstFail: boolean;
         exitOnTimeout: boolean;
     }>;
+    render?: Render;
     protected _tests: any[];
     protected _wasTimedOut: any[];
     constructor(label: string, config?: Partial<{
@@ -32,22 +59,13 @@ export declare class TestRunner {
         skip: boolean;
         errorExitOnFirstFail: boolean;
         exitOnTimeout: boolean;
-    }>);
-    static write(s?: string, nlCount?: number, nlChar?: string): void;
+    }>, render?: Render);
     static skip(message?: string): void;
     protected _add(label: string | Function, testFn?: Function, timeout?: number, type?: string): this;
     skip(label: string | Function, testFn?: Function, timeout?: number): this;
     only(label: string | Function, testFn?: Function, timeout?: number): this;
     todo(label: string | Function, testFn?: Function, timeout?: number): this;
     test(label: string | Function, testFn?: Function, timeout?: number): this;
-    protected _execHook(which: any, { label, suite }: {
-        label: any;
-        suite: any;
-    }): Promise<any>;
-    static sanitize(e: Error): string;
-    protected _catch(previousErr: any, fn: Function): Promise<any>;
-    protected _withTimeout(promise: any, ms: any): Promise<any>;
-    protected _run(index: any, results: any, label: any, testFn: any, verbose: any, totalToRun: any, context?: {}): Promise<any>;
     /**
      * Main run API
      *
@@ -68,9 +86,19 @@ export declare class TestRunner {
         details: any[];
         errorExitOnFirstFail: boolean;
     }>;
-    protected _renderNonTestType(type: any, label: any, verbose: any): void;
-    static renderStats(stats: any, prefix?: string, output?: boolean): string | void;
-    static renderResult(r: any, verbose: any, output?: boolean): string;
+    protected _run({ index, results, label, testFn, totalToRun }: {
+        index: any;
+        results: any;
+        label: any;
+        testFn: any;
+        totalToRun: any;
+    }, context?: {}): Promise<any>;
+    protected _execHook(which: any, { label, suite }: {
+        label: any;
+        suite: any;
+    }): Promise<any>;
+    protected _catch(previousErr: any, fn: Function): Promise<any>;
+    protected _withTimeout(promise: any, ms: any): Promise<any>;
     /**
      * Used in TestRunner.runAll to detect test files. Can be customized if needed...
      * @type {RegExp}
@@ -93,3 +121,4 @@ export declare class TestRunner {
         exitOnTimeout: boolean;
     }>): Promise<void>;
 }
+export {};

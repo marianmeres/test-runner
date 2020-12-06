@@ -3,11 +3,11 @@ const { TestRunner } = require('../dist');
 
 const suite = new TestRunner(path.basename(__filename));
 
-suite.test('This would pass', () => {});
+suite.test('This would normally pass', () => {});
 
-suite.test('And this too', () => {});
+suite.test('And this would too', () => {});
 
-suite.only("If this woldn't be marked as 'only'", () => {});
+suite.only("If this wouldn't be marked as 'only'", () => {});
 
 // run suite if this file is executed directly
 if (require.main === module) {

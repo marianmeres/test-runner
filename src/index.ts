@@ -1,8 +1,6 @@
-import { green, magenta, red, white, yellow, gray } from 'kleur';
-import { bold } from 'kleur/colors';
 import path from 'path';
-import tinydate from 'tinydate';
 import { totalist } from 'totalist/sync';
+import { Renderer } from './renderer';
 
 class TimeoutErr extends Error {}
 
@@ -10,21 +8,34 @@ class SkipErr extends Error {}
 
 class MissingTestFnErr extends Error {}
 
-// "T2C" -> type to color
-const T2C = {
-	error: red,
-	test: green,
-	skip: yellow,
-	todo: magenta,
-};
-
-// test type constants
 const ONLY = 'only';
 const TEST = 'test';
 const TODO = 'todo';
 const SKIP = 'skip';
 
 const isFn = (v) => typeof v === 'function';
+
+export interface RenderData {
+	suiteName: string;
+	type: string;
+	label: string;
+	error: Error;
+	duration: number;
+}
+
+interface Render {
+	verbose: boolean;
+	suiteName: (opts: Partial<RenderData>) => void;
+	result: (opts: Partial<RenderData>) => void;
+	stats: (opts: Partial<RenderData>, prefix?: string) => void;
+	//
+	runAllTitle: ({ whitelist }) => void;
+	runAllSuiteError: ({ error, name }) => void;
+	runAllStats: (stats) => void;
+	runAllErrorsSummary: ({ errorDetails, invalid }) => void;
+	//
+	log: (type, str) => void;
+}
 
 /**
  * Simple testing framework. Basic usage:
@@ -53,12 +64,10 @@ export class TestRunner {
 			skip: boolean;
 			errorExitOnFirstFail: boolean;
 			exitOnTimeout: boolean;
-		}> = {}
-	) {}
-
-	// hackable output renderer
-	static write(s = '', nlCount = 1, nlChar = '\n') {
-		process.stdout.write(`${s}` + `${nlChar}`.repeat(nlCount));
+		}> = {},
+		public render?: Render
+	) {
+		this.render = this.render || new Renderer();
 	}
 
 	static skip(message = '') {
@@ -77,14 +86,10 @@ export class TestRunner {
 			label = 'untitled';
 		}
 
-		label = `${label}` || 'untitled';
-
 		// prettier-ignore
-		testFn = isFn(testFn) ? testFn : () => {
-			throw new MissingTestFnErr(`Missing test function`);
-		};
+		testFn = isFn(testFn) ? testFn : () => { throw new MissingTestFnErr(`Missing test function`) };
 
-		this._tests.push({ label, testFn, timeout, type });
+		this._tests.push({ label: `${label}` || 'untitled', testFn, timeout, type });
 		return this;
 	}
 
@@ -102,104 +107,6 @@ export class TestRunner {
 
 	test(label: string | Function, testFn?: Function, timeout: number = null) {
 		return this._add(label, testFn, timeout, TEST);
-	}
-
-	protected async _execHook(which, { label, suite }) {
-		if (isFn(this.config[which])) {
-			return await this.config[which]({ __test__: label, __suite__: suite });
-		}
-		return {};
-	}
-
-	static sanitize(e: Error) {
-		return e
-			.toString()
-			.replace(/^(Error:\s*)/i, '')
-			.replace(process.cwd(), '')
-			.replace(' [ERR_ASSERTION]', '')
-			.replace(/\s\s+/g, ' ')
-			.trim();
-	}
-
-	// prettier-ignore
-	protected async _catch(previousErr, fn: Function) {
-		try { await fn(); }
-		catch (e) { previousErr = previousErr || e; } // keep first error
-		return previousErr;
-	}
-
-	protected async _withTimeout(promise, ms) {
-		ms = ms || this.config.timeout || 1000;
-		let tid;
-
-		const timer = new Promise((_, rej) => {
-			tid = setTimeout(() => rej(new TimeoutErr(`Timed out! (${ms} ms)`)), ms);
-		});
-
-		try {
-			return await Promise.race([promise(), timer]);
-		} catch (e) {
-			throw e;
-		} finally {
-			clearTimeout(tid);
-		}
-	}
-
-	protected async _run(index, results, label, testFn, verbose, totalToRun, context = {}) {
-		const start = Date.now();
-		let error, stack, _err;
-		const meta = { label, suite: this.label };
-
-		// start trying with "pre" hooks up until the testFn...
-		try {
-			if (!index) {
-				await this._execHook('before', meta);
-			}
-			const beResult = await this._execHook('beforeEach', meta);
-			// pass merged context and "beforeEach" result to each testFn
-			await testFn(
-				JSON.parse(JSON.stringify({ ...(context || {}), ...(beResult || {}) }))
-			);
-			results.ok++;
-		} catch (e) {
-			_err = e;
-			if (_err instanceof MissingTestFnErr) _err.stack = null;
-		}
-
-		// and continue with "post" hooks (even if error might have happened above)
-		_err = await this._catch(_err, () => this._execHook('afterEach', meta));
-
-		if (index === totalToRun) {
-			_err = await this._catch(_err, () => this._execHook('after', meta));
-		}
-
-		let _wasRuntimeSkipped = false;
-
-		if (_err) {
-			error = TestRunner.sanitize(_err);
-			// runtime skip detection - render as 'skip' type and do not act as error at all
-			if (_err instanceof SkipErr) {
-				results.skip++;
-				this._renderNonTestType(SKIP, `${label}${gray(` - ${error}`)}`, verbose);
-				_wasRuntimeSkipped = true;
-			}
-			// regular error
-			else {
-				stack = _err.stack;
-				results.errors++;
-			}
-		}
-
-		const duration = Date.now() - start;
-		results.details.push({ label, error, stack, duration, suiteName: this.label });
-
-		// trying to prevent late render after test was rejected via timeout catch
-		// still not perfect...
-		if (!_wasRuntimeSkipped && !this._wasTimedOut.includes(index)) {
-			TestRunner.renderResult({ index, label, error, stack, duration }, verbose);
-		}
-
-		return results;
 	}
 
 	/**
@@ -224,9 +131,11 @@ export class TestRunner {
 		}> = {}
 	) {
 		// if undefined then fallback (which still can be undef)
-		const uf = (v, f) => v === void 0 ? f : v;
+		const uf = (v, f) => (v === void 0 ? f : v);
 		errorExitOnFirstFail = uf(errorExitOnFirstFail, this.config.errorExitOnFirstFail);
 		exitOnTimeout = uf(exitOnTimeout, this.config.exitOnTimeout);
+
+		this.render.verbose = verbose;
 
 		// skip all config flag
 		if (this.config.skip) {
@@ -245,52 +154,52 @@ export class TestRunner {
 			});
 		}
 
+		const totalStart = Date.now();
 		const totalToRun = this._tests.reduce((m, t) => {
 			if (t.type === TEST) m++;
 			return m;
 		}, 0);
 
-		const totalStart = Date.now();
+		this.render.suiteName({ suiteName: this.label });
+
 		let results = { ok: 0, errors: 0, skip: 0, todo: 0, details: [] };
-
-		verbose && TestRunner.write(white(bold(`\n--> ${this.label} `)), 2);
-
 		for (let [index, { label, testFn, timeout, type }] of this._tests.entries()) {
 			if (type !== TEST) {
 				results[type]++;
-				this._renderNonTestType(type, label, verbose);
+				this.render.result({ type, label });
 				continue;
 			}
 
 			const start = Date.now();
 			try {
 				results = await this._withTimeout(
-					() => this._run(index, results, label, testFn, verbose, totalToRun, context),
+					() => this._run({ index, results, label, testFn, totalToRun }, context),
 					timeout
 				);
-			} catch (e) {
-				const error = TestRunner.sanitize(e);
+			} catch (error) {
 				results.errors++;
 
 				// the timeouts are tricky as we can't really kill (or cancel) the testFn
 				// (We could have spawn each test run into child process, but intentionally not doing so)
 				// So, results with TimeoutErr might be sometimes unexpected
-				if (e instanceof TimeoutErr) {
+				// prettier-ignore
+				if (error instanceof TimeoutErr) {
 					// saving timed-out so we can omit late render, hm...
 					this._wasTimedOut.push(index);
 					if (exitOnTimeout) {
-						TestRunner.write(yellow(`    ${error} (see exitOnTimeout option in docs)`));
+						this.render.log('warn', `${error.toString()} (see exitOnTimeout option in docs)` );
 						process.exit(errorExitOnFirstFail ? 1 : 0);
 					}
 				} else {
-					TestRunner.write(red('Internal TestRunner Error: expecting TimeoutErr'));
+					this.render.log('error', 'Internal TestRunner Error: expecting TimeoutErr');
 				}
 
 				// anyway, act as a regular error, but render no stack here
 				const duration = Date.now() - start;
-				const details = { label, error, stack: null, duration, suiteName: this.label };
-				results.details.push(details);
-				TestRunner.renderResult(details, verbose);
+				error.stack = null;
+				const data = { type, label, error, duration };
+				results.details.push(data);
+				this.render.result(data);
 			}
 
 			if (results.errors && errorExitOnFirstFail) {
@@ -307,66 +216,96 @@ export class TestRunner {
 			details: results.details,
 			errorExitOnFirstFail,
 		};
-		verbose && TestRunner.renderStats(info);
+
+		this.render.stats(info);
 
 		return info;
 	}
 
-	protected _renderNonTestType(type, label, verbose) {
-		if (verbose) {
-			TestRunner.write(T2C[type](`    [ ] (${type}) ${label}`));
-		} else {
-			TestRunner.write(T2C[type]('•') + ' ', 0);
-		}
-	}
+	protected async _run({ index, results, label, testFn, totalToRun }, context = {}) {
+		const start = Date.now();
+		let error;
+		const meta = { label, suite: this.label };
 
-	static renderStats(stats, prefix = 'Summary: ', output = true) {
-		let summary = [
-			stats.ok ? T2C.test(`OK ${stats.ok}`) : gray('0 tests'),
-			stats.errors ? T2C.error(`errors ${stats.errors}`) : '',
-			stats.skip ? T2C.skip(`skipped ${stats.skip}`) : '',
-			stats.todo ? T2C.todo(`todo ${stats.todo}`) : '',
-		]
-			.filter(Boolean)
-			.join(gray(', '));
-
-		let dur = '';
-		if (stats.duration > 1000) {
-			dur = gray(` (${Math.round(stats.duration / 1000)} s)`);
-		} else {
-			dur = gray(` (${stats.duration} ms)`);
+		// start trying with "pre" hooks up until the testFn...
+		try {
+			if (!index) {
+				await this._execHook('before', meta);
+			}
+			const beResult = await this._execHook('beforeEach', meta);
+			// pass merged context and "beforeEach" result to each testFn
+			await testFn(
+				JSON.parse(JSON.stringify({ ...(context || {}), ...(beResult || {}) }))
+			);
+			results.ok++;
+		} catch (e) {
+			error = e;
+			if (error instanceof MissingTestFnErr) error.stack = null;
 		}
 
-		let out = `\n    ${gray().bold(prefix)}${summary}${dur}\n`;
-		return output ? TestRunner.write(out) : out;
+		// and continue with "post" hooks (even if error might have happened above)
+		error = await this._catch(error, () => this._execHook('afterEach', meta));
+
+		if (index === totalToRun) {
+			error = await this._catch(error, () => this._execHook('after', meta));
+		}
+
+		let _wasRuntimeSkipped = false;
+
+		if (error) {
+			// runtime skip detection - render as 'skip' type and do not act as error at all
+			if (error instanceof SkipErr) {
+				results.skip++;
+				error.stack = null;
+				this.render.result({ type: SKIP, label, error });
+				_wasRuntimeSkipped = true;
+			}
+			// regular error
+			else {
+				results.errors++;
+			}
+		}
+
+		const duration = Date.now() - start;
+		results.details.push({ label, error, duration, suiteName: this.label });
+
+		// trying to prevent late render after test was rejected via timeout catch
+		// still not perfect...
+		if (!_wasRuntimeSkipped && !this._wasTimedOut.includes(index)) {
+			this.render.result({ type: TEST, label, error, duration });
+		}
+
+		return results;
 	}
 
-	static renderResult(r, verbose, output = true) {
-		const _renderStack = (stack) =>
-			stack
-				.split('\n')
-				// shorten long absolute node_modules paths as relative
-				.map((v) => v.replace(/(\([^\(]+node_modules)/, '(node_modules'))
-				.map((v) => v.replace(process.cwd(), ''))
-				.map((v) => v.replace(/\s\s+/g, ' ').trim())
-				.filter(Boolean)
-				.slice(1, 5) // skip first line (rendered via e.toString()) and reduce noise
-				.join('\n        ')
-				.trim();
+	protected async _execHook(which, { label, suite }) {
+		if (isFn(this.config[which])) {
+			return await this.config[which]({ __test__: label, __suite__: suite });
+		}
+		return {};
+	}
 
-		const icon = r.error ? T2C.error('[ ] ') : T2C.test('[x] ');
-		const label = r.error ? T2C.error().bold(r.label) : T2C.test(r.label);
-		const err = r.error ? gray(' - ') + white(r.error) : '';
+	// prettier-ignore
+	protected async _catch(previousErr, fn: Function) {
+		try { await fn(); }
+		catch (e) { previousErr = previousErr || e; } // keep first error
+		return previousErr;
+	}
 
-		let out = '    ' + `${icon}${label}${err}`.replace(/\s\s+/g, ' ').trim();
-		if (r.stack) out += `\n        ${gray(_renderStack(r.stack))}`;
+	protected async _withTimeout(promise, ms) {
+		ms = ms || this.config.timeout || 1000;
+		let tid;
 
-		if (!output) return out;
+		const timer = new Promise((_, rej) => {
+			tid = setTimeout(() => rej(new TimeoutErr(`Timed out! (${ms} ms)`)), ms);
+		});
 
-		if (verbose) {
-			TestRunner.write(out);
-		} else {
-			TestRunner.write(T2C[err ? 'error' : 'test']('•') + ' ', 0);
+		try {
+			return await Promise.race([promise(), timer]);
+		} catch (e) {
+			throw e;
+		} finally {
+			clearTimeout(tid);
 		}
 	}
 
@@ -413,15 +352,8 @@ export class TestRunner {
 		} = options;
 
 		if (!Array.isArray(whitelist)) whitelist = [whitelist];
-
 		whitelist = whitelist.map((v) => new RegExp(v, 'i'));
 		whitelist.unshift(new RegExp(TestRunner.testFileRegex, 'i'));
-
-		let which: any = '...';
-		if (whitelist.length > 1) {
-			which = [...whitelist].splice(1); // remove TestRunner.testFileRegex
-			which = ' for ' + gray('[ ' + white().bold(which.join(gray(', '))) + ' ]');
-		}
 
 		const testFiles = ((_dirs) => {
 			// normalize + unique-ize
@@ -448,15 +380,13 @@ export class TestRunner {
 		})(dirs);
 
 		// clear screen only if about to go running
-		testFiles.length && console.clear();
+		const render = new Renderer(verbose, !!testFiles.length);
 
-		// prettier-ignore
-		if (!verbose) {
-			TestRunner.write(white(`\n--> Running tests${which}`) + gray(' (use -v param for details)'));
-			TestRunner.write('\n    ', 0);
-		} else {
-			TestRunner.write(gray(`\n    Running tests${which}`));
+		let which = [];
+		if (whitelist.length > 1) {
+			which = [...whitelist].splice(1); // remove TestRunner.testFileRegex
 		}
+		render.runAllTitle({ whitelist: which });
 
 		const totals = { ok: 0, errors: 0, skip: 0, todo: 0, duration: 0 };
 		const invalid = [];
@@ -487,47 +417,18 @@ export class TestRunner {
 					}
 					return memo;
 				}, errorDetails);
-			} catch (err) {
-				const error = TestRunner.sanitize(err);
-				if (verbose) {
-					TestRunner.write(`\n--> ${T2C.error(name)} ${gray('--> ' + error)}\n`);
-				} else {
-					TestRunner.write(T2C.skip('•') + ' ', 0);
-				}
+			} catch (error) {
+				render.runAllSuiteError({ error, name });
 				invalid.push({ label: path.basename(f), error });
 			}
 		}
 
-		const warn = invalid.length ? yellow(` (invalid test files: ${invalid.length})`) : '';
-
-		!verbose && TestRunner.write(''); // extra \n
-		const title = tinydate('[{HH}:{mm}:{ss}] Summary: ')();
-
-		// prettier-ignore
-		TestRunner.write(
-			'\n--> ' + `${TestRunner.renderStats(totals, title, false)}`.trim() + `${warn}\n`
-		);
+		render.runAllStats({ stats: totals, invalid });
 
 		// finally, if we're not verbose, still render compact error summary if enabled
-		if (!verbose && enableErrorsSummaryOnNonVerbose) {
-			const errors = Object.entries(errorDetails);
-			if (errors.length) {
-				TestRunner.write(red(`\n    Errors summary`));
-				errors.forEach(([suiteName, list]) => {
-					TestRunner.write(gray(`\n--> `) + white(suiteName));
-					(list as any).forEach(({ label, error }) => {
-						TestRunner.write(T2C.error(`    ${label}`) + gray(` - ${error}`));
-					});
-				});
-				TestRunner.write(''); // extra \n
-			}
-			if (invalid.length) {
-				TestRunner.write(T2C.skip(`\n    Invalid files summary`), 2);
-				invalid.forEach(({ label, error }) => {
-					TestRunner.write(gray(`--> `) + T2C.skip(label) + gray(` --> ${error}`), 2);
-				});
-				TestRunner.write(''); // extra \n
-			}
-		}
+		// prettier-ignore
+		!verbose && enableErrorsSummaryOnNonVerbose && render.runAllErrorsSummary({
+			errorDetails, invalid,
+		});
 	}
 }
