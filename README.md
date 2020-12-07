@@ -82,7 +82,7 @@ See [examples](examples/) for more.
 
 ## Screenshots
 
-Screenshots taken from [examples](examples/).
+Screenshots are taken from [examples](examples/).
 
 #### `node examples` (non verbose)
 
@@ -97,7 +97,7 @@ Screenshots taken from [examples](examples/).
 This runner does not spawn the actual tests executions into separate child processes.
 This is an intentional choice, but it comes with the price of not beeing able to truly
 isolate/kill/cancel the test execution and its context (such as pending `setTimeout`s)
-which can lead to unexpected results.
+which can sometimes lead to unexpected results.
 
 ## Browser support
 
