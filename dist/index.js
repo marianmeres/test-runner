@@ -193,7 +193,7 @@ class TestRunner {
         }
         // and continue with "post" hooks (even if error might have happened above)
         error = await this._catch(error, () => this._execHook('afterEach', meta));
-        if (index === totalToRun) {
+        if (index === totalToRun - 1) {
             error = await this._catch(error, () => this._execHook('after', meta));
         }
         let _wasRuntimeSkipped = false;
