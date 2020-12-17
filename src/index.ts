@@ -313,7 +313,7 @@ export class TestRunner {
 	 * Used in TestRunner.runAll to detect test files. Can be customized if needed...
 	 * @type {RegExp}
 	 */
-	static testFileRegex = /\.tests?\.[tj]sx?$/;
+	static testFileRegex = /\.tests?\.([tj]sx?|mjs)$/;
 
 	/**
 	 * Will run all tests (see `TestRunner.testFileRegex`) under given directories,

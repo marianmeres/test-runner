@@ -339,4 +339,4 @@ exports.TestRunner = TestRunner;
  * Used in TestRunner.runAll to detect test files. Can be customized if needed...
  * @type {RegExp}
  */
-TestRunner.testFileRegex = /\.tests?\.[tj]sx?$/;
+TestRunner.testFileRegex = /\.tests?\.([tj]sx?|mjs)$/;
