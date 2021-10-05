@@ -49,12 +49,15 @@ const isFn = (v) => typeof v === 'function';
  * 	suite.run();
  */
 class TestRunner {
+    label;
+    config;
+    render;
+    _tests = [];
+    _wasTimedOut = [];
     constructor(label, config = {}, render) {
         this.label = label;
         this.config = config;
         this.render = render;
-        this._tests = [];
-        this._wasTimedOut = [];
         this.render = this.render || new renderer_1.Renderer();
     }
     static skip(message = '') {
@@ -252,6 +255,11 @@ class TestRunner {
         }
     }
     /**
+     * Used in TestRunner.runAll to detect test files. Can be customized if needed...
+     * @type {RegExp}
+     */
+    static testFileRegex = /\.tests?\.([tj]sx?|mjs)$/;
+    /**
      * Will run all tests (see `TestRunner.testFileRegex`) under given directories,
      * respecting options
      *
@@ -278,7 +286,7 @@ class TestRunner {
             };
             const out = [];
             for (let dir of _dirs) {
-                sync_1.totalist(dir, (name, abs, stats) => {
+                (0, sync_1.totalist)(dir, (name, abs, stats) => {
                     // hard blacklist check first
                     if (/node_modules/.test(abs))
                         return;
@@ -335,8 +343,3 @@ class TestRunner {
     }
 }
 exports.TestRunner = TestRunner;
-/**
- * Used in TestRunner.runAll to detect test files. Can be customized if needed...
- * @type {RegExp}
- */
-TestRunner.testFileRegex = /\.tests?\.([tj]sx?|mjs)$/;
