@@ -1,6 +1,10 @@
-const assert = require('assert').strict;
-const path = require('path');
-const { TestRunner } = require('../dist');
+import path from 'path';
+import { strict as assert } from 'assert';
+import { TestRunner } from "../dist/index.js";
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 let DB = null;
 
@@ -43,10 +47,11 @@ suite.test('Means they must stay fixed', ({ DB }) => {
 });
 
 // run suite if this file is executed directly
-if (require.main === module) {
-	suite.run();
-}
+// if (require.main === module) {
+// 	suite.run();
+// }
 
 // this is important for `runAll`
 // for ES6 modules type: export default suite
-module.exports = suite;
+// module.exports = suite;
+export default suite

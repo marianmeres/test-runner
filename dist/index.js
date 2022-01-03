@@ -1,31 +1,6 @@
-"use strict";
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || function (mod) {
-    if (mod && mod.__esModule) return mod;
-    var result = {};
-    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
-    __setModuleDefault(result, mod);
-    return result;
-};
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.TestRunner = void 0;
-const path_1 = __importDefault(require("path"));
-const sync_1 = require("totalist/sync");
-const renderer_1 = require("./renderer");
+import path from 'path';
+import { totalist } from 'totalist/sync/index.js';
+import { Renderer } from './renderer.js';
 class TimeoutErr extends Error {
 }
 class SkipErr extends Error {
@@ -48,7 +23,7 @@ const isFn = (v) => typeof v === 'function';
  * 	})
  * 	suite.run();
  */
-class TestRunner {
+export class TestRunner {
     label;
     config;
     render;
@@ -58,7 +33,7 @@ class TestRunner {
         this.label = label;
         this.config = config;
         this.render = render;
-        this.render = this.render || new renderer_1.Renderer();
+        this.render = this.render || new Renderer();
     }
     static skip(message = '') {
         throw new SkipErr(message || 'Skipped');
@@ -276,7 +251,7 @@ class TestRunner {
             // normalize + unique-ize
             if (!Array.isArray(_dirs))
                 _dirs = [_dirs];
-            _dirs = [...new Set(_dirs.map(path_1.default.normalize))];
+            _dirs = [...new Set(_dirs.map(path.normalize))];
             const isWhitelisted = (f) => {
                 for (let i = 0; i < whitelist.length; i++) {
                     if (!whitelist[i].test(f))
@@ -286,7 +261,7 @@ class TestRunner {
             };
             const out = [];
             for (let dir of _dirs) {
-                (0, sync_1.totalist)(dir, (name, abs, stats) => {
+                totalist(dir, (name, abs, stats) => {
                     // hard blacklist check first
                     if (/node_modules/.test(abs))
                         return;
@@ -299,7 +274,7 @@ class TestRunner {
             return out;
         })(dirs);
         // clear screen only if about to go running
-        const render = new renderer_1.Renderer(verbose, !!testFiles.length);
+        const render = new Renderer(verbose, !!testFiles.length);
         let which = [];
         if (whitelist.length > 1) {
             which = [...whitelist].splice(1); // remove TestRunner.testFileRegex
@@ -312,7 +287,7 @@ class TestRunner {
         for (let [f, name] of testFiles) {
             try {
                 // each suite must be exported as default
-                const suite = (await Promise.resolve().then(() => __importStar(require(f)))).default;
+                const suite = (await import(f)).default;
                 let { ok, errors, skip, todo, duration, details } = await suite.run(verbose, context, { errorExitOnFirstFail, exitOnTimeout });
                 totals.ok += ok;
                 totals.errors += errors;
@@ -331,7 +306,7 @@ class TestRunner {
             }
             catch (error) {
                 render.runAllSuiteError({ error, name });
-                invalid.push({ label: path_1.default.basename(f), error });
+                invalid.push({ label: path.basename(f), error });
             }
         }
         render.runAllStats({ stats: totals, invalid });
@@ -342,4 +317,3 @@ class TestRunner {
         });
     }
 }
-exports.TestRunner = TestRunner;

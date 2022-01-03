@@ -1,6 +1,6 @@
 import path from 'path';
-import { totalist } from 'totalist/sync';
-import { Renderer } from './renderer';
+import { totalist } from 'totalist/sync/index.js';
+import { Renderer } from './renderer.js';
 
 class TimeoutErr extends Error {}
 
