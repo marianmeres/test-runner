@@ -1,5 +1,5 @@
 {
-  "name": "test-runner",
+  "name": "@marianmeres/test-runner",
   "version": "2.0.8",
   "description": "Simple javascript test runner",
   "main": "dist/mjs/index.js",
@@ -9,6 +9,12 @@
       "import": "./dist/mjs/index.js",
       "require": "./dist/cjs/index.js"
     }
+  },
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "access": "public"
   },
   "scripts": {
     "clean": "rimraf dist/*",
@@ -22,8 +28,7 @@
   },
   "keywords": [
     "nodejs",
-    "testing",
-    "framework"
+    "testing"
   ],
   "author": "Marian Meres <marian@meres.sk>",
   "license": "WTFPL",

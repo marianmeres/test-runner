@@ -2,8 +2,6 @@
 
 Simple, sequential, exception based test runner for node js.
 
-Main motivation: simplicity.
-
 ## Features
 
 - usual `test`, `skip`, `only`, `todo` api
@@ -21,7 +19,7 @@ Main motivation: simplicity.
 ## Installation
 
 ```shell
-npm install https://github.com/marianmeres/test-runner
+npm i -D @marianmeres/test-runner
 ```
 
 ## Quick start
@@ -42,7 +40,8 @@ See [examples](examples/) for more.
 
 ## CLI
 
-Standalone CLI is not included, but there is a `TestRunner.runAll` api, so something like this:
+Standalone CLI is not included, but there is a `TestRunner.runAll` api, so something like
+this should work fine:
 
 ```js
 // tests/index.js
@@ -52,15 +51,14 @@ const whitelist = args.filter((v) => v !== '-v');
 
 TestRunner.runAll([__dirname, '../src'], { verbose, whitelist });
 ```
-runnable via
+runnable as
 ```shell
 $ node tests [-v] [whitelist]
 ```
-or also watchable via
+or also watchable as
 ```bash
 $ nodemon -q tests -- [-v] [whitelist]
 ```
-looks as a good enough CLI for me.
 
 #### How to `TestRunner.runAll([dirs], options)` ?
 
@@ -99,13 +97,8 @@ This is an intentional choice, but it comes with the price of not beeing able to
 isolate/kill/cancel the test execution and its context (such as pending `setTimeout`s)
 which can sometimes lead to unexpected results.
 
-## Browser support
+## Api
 
-Not really planned, but with just a few hacks (conditionally wrap `process.` calls) it should
-work in browser too.
-
-## Todo (maybe)
-
-Describe full api options... Until then, check the [definition](./dist/index.d.ts)
-[files](./dist/renderer.d.ts).
+Check the [definition](./dist/mjs/index.d.ts)
+[files](./dist/mjs/renderer.d.ts).
 
