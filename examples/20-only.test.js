@@ -1,4 +1,3 @@
-import { strict as assert } from 'node:assert';
 import { dirname, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { TestRunner } from "../dist/mjs/index.js";

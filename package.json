@@ -2,11 +2,17 @@
   "name": "test-runner",
   "version": "2.0.5",
   "description": "Simple javascript test runner",
-  "main": "dist/mjs/index.js",
+  "main": "dist/cjs/index.js",
+  "module": "dist/mjs/index.js",
   "type": "module",
+  "exports": {
+    ".": {
+      "import": "./dist/mjs/index.js",
+      "require": "./dist/cjs/index.js"
+    }
+  },
   "scripts": {
     "clean": "rimraf dist/*",
-    "xxx-build": "npm run clean && tsc",
     "build": "npm run clean && tsc -p tsconfig.json && tsc -p tsconfig-cjs.json && ./post-build.sh",
     "prettier": "prettier --write \"{src,examples}/**/*.{js,ts,json}\"",
     "release": "node release.cjs"
