@@ -1,9 +1,9 @@
 const { bold, gray, red, yellow, magenta, cyan, green } = require('kleur/colors');
 const prompt = require('prompt');
-const fs = require('fs');
-const util = require('util');
-const exec = util.promisify(require('child_process').exec);
-const childProcess = require('child_process');
+const fs = require('node:fs');
+const util = require('node:util');
+const exec = util.promisify(require('node:child_process').exec);
+const childProcess = require('node:child_process');
 
 // args
 const args = require('minimist')(process.argv.slice(2));
