@@ -1,11 +1,2 @@
-cat >dist/cjs/package.json <<!EOF
-{
-    "type": "commonjs"
-}
-!EOF
-
-cat >dist/mjs/package.json <<!EOF
-{
-    "type": "module"
-}
-!EOF
+echo '{"type": "commonjs"}' > dist/cjs/package.json
+echo '{"type": "module"}' > dist/mjs/package.json
