@@ -73,7 +73,7 @@ async function doJob() {
 		// process.chdir('../client');
 
 		// pokracujeme...
-		await childProcess.spawnSync('git', ['add', 'package.json'], { stdio: 'inherit' });
+		await childProcess.spawnSync('git', ['add', 'package.json', 'package-lock.json'], { stdio: 'inherit' });
 		await childProcess.spawnSync('git', ['commit', '-m', MESSAGE], { stdio: 'inherit' });
 		await childProcess.spawnSync('git', ['tag', VERSION_NEW], { stdio: 'inherit' });
 		// await childProcess.spawnSync('git', ['status'], { stdio: 'inherit' });
