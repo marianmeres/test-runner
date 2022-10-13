@@ -1,6 +1,6 @@
 {
   "name": "test-runner",
-  "version": "2.0.6",
+  "version": "2.0.7",
   "description": "Simple javascript test runner",
   "main": "dist/cjs/index.js",
   "module": "dist/mjs/index.js",
