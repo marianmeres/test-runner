@@ -1,4 +1,4 @@
-import { RenderData } from './index.js';
+import { RenderData } from './test-runner.js';
 export declare class Renderer {
     verbose: boolean;
     constructor(verbose?: boolean, clear?: boolean);

@@ -22,15 +22,6 @@ var __importStar = (this && this.__importStar) || function (mod) {
     __setModuleDefault(result, mod);
     return result;
 };
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -62,12 +53,15 @@ const isFn = (v) => typeof v === 'function';
  * 	suite.run();
  */
 class TestRunner {
+    label;
+    config;
+    render;
+    _tests = [];
+    _wasTimedOut = [];
     constructor(label, config = {}, render) {
         this.label = label;
         this.config = config;
         this.render = render;
-        this._tests = [];
-        this._wasTimedOut = [];
         this.render = this.render || new renderer_js_1.Renderer();
     }
     static skip(message = '') {
@@ -104,176 +98,171 @@ class TestRunner {
      * @param errorExitOnFirstFail
      * @param exitOnTimeout
      */
-    run(verbose = true, context = {}, { errorExitOnFirstFail, exitOnTimeout, } = {}) {
-        return __awaiter(this, void 0, void 0, function* () {
-            // if undefined then fallback (which still can be undef)
-            const uf = (v, f) => (v === void 0 ? f : v);
-            errorExitOnFirstFail = uf(errorExitOnFirstFail, this.config.errorExitOnFirstFail);
-            exitOnTimeout = uf(exitOnTimeout, this.config.exitOnTimeout);
-            this.render.verbose = verbose;
-            // skip all config flag
-            if (this.config.skip) {
-                this._tests = this._tests.map((t) => {
-                    if (t.type === TEST)
-                        t.type = SKIP;
-                    return t;
-                });
-            }
-            // if at least one "only" exist, mark all other non-only as "skip"
-            if (this._tests.some((t) => t.type === ONLY)) {
-                const switchMap = { [TEST]: SKIP, [ONLY]: TEST };
-                this._tests = this._tests.map((t) => {
-                    if (switchMap[t.type])
-                        t.type = switchMap[t.type];
-                    return t;
-                });
-            }
-            const totalStart = Date.now();
-            const totalToRun = this._tests.reduce((m, t) => {
+    async run(verbose = true, context = {}, { errorExitOnFirstFail, exitOnTimeout, } = {}) {
+        // if undefined then fallback (which still can be undef)
+        const uf = (v, f) => (v === void 0 ? f : v);
+        errorExitOnFirstFail = uf(errorExitOnFirstFail, this.config.errorExitOnFirstFail);
+        exitOnTimeout = uf(exitOnTimeout, this.config.exitOnTimeout);
+        this.render.verbose = verbose;
+        // skip all config flag
+        if (this.config.skip) {
+            this._tests = this._tests.map((t) => {
                 if (t.type === TEST)
-                    m++;
-                return m;
-            }, 0);
-            this.render.suiteName({ suiteName: this.label });
-            let results = { ok: 0, errors: 0, skip: 0, todo: 0, details: [] };
-            for (let [index, { label, testFn, timeout, type }] of this._tests.entries()) {
-                if (type !== TEST) {
-                    results[type]++;
-                    this.render.result({ type, label });
-                    continue;
-                }
-                const start = Date.now();
-                try {
-                    results = yield this._withTimeout(() => this._run({ index, results, label, testFn, totalToRun }, context), timeout);
-                }
-                catch (error) {
-                    results.errors++;
-                    // the timeouts are tricky as we can't really kill (or cancel) the testFn
-                    // (We could have spawn each test run into child process, but intentionally not doing so)
-                    // So, results with TimeoutErr might be sometimes unexpected
-                    // prettier-ignore
-                    if (error instanceof TimeoutErr) {
-                        // saving timed-out so we can omit late render, hm...
-                        this._wasTimedOut.push(index);
-                        if (exitOnTimeout) {
-                            this.render.log('warn', `${error.toString()} (see exitOnTimeout option in docs)`);
-                            process.exit(errorExitOnFirstFail ? 1 : 0);
-                        }
-                    }
-                    else {
-                        this.render.log('error', 'Internal TestRunner Error: expecting TimeoutErr');
-                    }
-                    // anyway, act as a regular error, but render no stack here
-                    const duration = Date.now() - start;
-                    error.stack = null;
-                    const data = { type, label, error, duration };
-                    results.details.push(data);
-                    this.render.result(data);
-                }
-                if (results.errors && errorExitOnFirstFail) {
-                    process.exit(1);
-                }
+                    t.type = SKIP;
+                return t;
+            });
+        }
+        // if at least one "only" exist, mark all other non-only as "skip"
+        if (this._tests.some((t) => t.type === ONLY)) {
+            const switchMap = { [TEST]: SKIP, [ONLY]: TEST };
+            this._tests = this._tests.map((t) => {
+                if (switchMap[t.type])
+                    t.type = switchMap[t.type];
+                return t;
+            });
+        }
+        const totalStart = Date.now();
+        const totalToRun = this._tests.reduce((m, t) => {
+            if (t.type === TEST)
+                m++;
+            return m;
+        }, 0);
+        this.render.suiteName({ suiteName: this.label });
+        let results = { ok: 0, errors: 0, skip: 0, todo: 0, details: [] };
+        for (let [index, { label, testFn, timeout, type }] of this._tests.entries()) {
+            if (type !== TEST) {
+                results[type]++;
+                this.render.result({ type, label });
+                continue;
             }
-            const info = {
-                ok: results.ok,
-                errors: results.errors,
-                skip: results.skip,
-                todo: results.todo,
-                duration: Date.now() - totalStart,
-                details: results.details,
-                errorExitOnFirstFail,
-            };
-            this.render.stats(info);
-            return info;
-        });
-    }
-    _run({ index, results, label, testFn, totalToRun }, context = {}) {
-        return __awaiter(this, void 0, void 0, function* () {
             const start = Date.now();
-            let error;
-            const meta = { label, suite: this.label };
-            // start trying with "pre" hooks up until the testFn...
             try {
-                if (!index) {
-                    yield this._execHook('before', meta);
+                results = await this._withTimeout(() => this._run({ index, results, label, testFn, totalToRun }, context), timeout);
+            }
+            catch (error) {
+                results.errors++;
+                // the timeouts are tricky as we can't really kill (or cancel) the testFn
+                // (We could have spawn each test run into child process, but intentionally not doing so)
+                // So, results with TimeoutErr might be sometimes unexpected
+                // prettier-ignore
+                if (error instanceof TimeoutErr) {
+                    // saving timed-out so we can omit late render, hm...
+                    this._wasTimedOut.push(index);
+                    if (exitOnTimeout) {
+                        this.render.log('warn', `${error.toString()} (see exitOnTimeout option in docs)`);
+                        process.exit(errorExitOnFirstFail ? 1 : 0);
+                    }
                 }
-                const beResult = yield this._execHook('beforeEach', meta);
-                // pass merged context and "beforeEach" result to each testFn
-                yield testFn(JSON.parse(JSON.stringify(Object.assign(Object.assign({}, (context || {})), (beResult || {})))));
-                results.ok++;
-            }
-            catch (e) {
-                error = e;
-                if (error instanceof MissingTestFnErr)
-                    error.stack = null;
-            }
-            // and continue with "post" hooks (even if error might have happened above)
-            error = yield this._catch(error, () => this._execHook('afterEach', meta));
-            if (index === totalToRun - 1) {
-                error = yield this._catch(error, () => this._execHook('after', meta));
-            }
-            let _wasRuntimeSkipped = false;
-            if (error) {
-                // runtime skip detection - render as 'skip' type and do not act as error at all
-                if (error instanceof SkipErr) {
-                    results.skip++;
-                    error.stack = null;
-                    this.render.result({ type: SKIP, label, error });
-                    _wasRuntimeSkipped = true;
-                }
-                // regular error
                 else {
-                    results.errors++;
+                    this.render.log('error', 'Internal TestRunner Error: expecting TimeoutErr');
                 }
+                // anyway, act as a regular error, but render no stack here
+                const duration = Date.now() - start;
+                error.stack = null;
+                const data = { type, label, error, duration };
+                results.details.push(data);
+                this.render.result(data);
             }
-            const duration = Date.now() - start;
-            results.details.push({ label, error, duration, suiteName: this.label });
-            // trying to prevent late render after test was rejected via timeout catch
-            // still not perfect...
-            if (!_wasRuntimeSkipped && !this._wasTimedOut.includes(index)) {
-                this.render.result({ type: TEST, label, error, duration });
+            if (results.errors && errorExitOnFirstFail) {
+                process.exit(1);
             }
-            return results;
-        });
+        }
+        const info = {
+            ok: results.ok,
+            errors: results.errors,
+            skip: results.skip,
+            todo: results.todo,
+            duration: Date.now() - totalStart,
+            details: results.details,
+            errorExitOnFirstFail,
+        };
+        this.render.stats(info);
+        return info;
     }
-    _execHook(which, { label, suite }) {
-        return __awaiter(this, void 0, void 0, function* () {
-            if (isFn(this.config[which])) {
-                return yield this.config[which]({ __test__: label, __suite__: suite });
+    async _run({ index, results, label, testFn, totalToRun }, context = {}) {
+        const start = Date.now();
+        let error;
+        const meta = { label, suite: this.label };
+        // start trying with "pre" hooks up until the testFn...
+        try {
+            if (!index) {
+                await this._execHook('before', meta);
             }
-            return {};
-        });
+            const beResult = await this._execHook('beforeEach', meta);
+            // pass merged context and "beforeEach" result to each testFn
+            await testFn(JSON.parse(JSON.stringify({ ...(context || {}), ...(beResult || {}) })));
+            results.ok++;
+        }
+        catch (e) {
+            error = e;
+            if (error instanceof MissingTestFnErr)
+                error.stack = null;
+        }
+        // and continue with "post" hooks (even if error might have happened above)
+        error = await this._catch(error, () => this._execHook('afterEach', meta));
+        if (index === totalToRun - 1) {
+            error = await this._catch(error, () => this._execHook('after', meta));
+        }
+        let _wasRuntimeSkipped = false;
+        if (error) {
+            // runtime skip detection - render as 'skip' type and do not act as error at all
+            if (error instanceof SkipErr) {
+                results.skip++;
+                error.stack = null;
+                this.render.result({ type: SKIP, label, error });
+                _wasRuntimeSkipped = true;
+            }
+            // regular error
+            else {
+                results.errors++;
+            }
+        }
+        const duration = Date.now() - start;
+        results.details.push({ label, error, duration, suiteName: this.label });
+        // trying to prevent late render after test was rejected via timeout catch
+        // still not perfect...
+        if (!_wasRuntimeSkipped && !this._wasTimedOut.includes(index)) {
+            this.render.result({ type: TEST, label, error, duration });
+        }
+        return results;
+    }
+    async _execHook(which, { label, suite }) {
+        if (isFn(this.config[which])) {
+            return await this.config[which]({ __test__: label, __suite__: suite });
+        }
+        return {};
     }
     // prettier-ignore
-    _catch(previousErr, fn) {
-        return __awaiter(this, void 0, void 0, function* () {
-            try {
-                yield fn();
-            }
-            catch (e) {
-                previousErr = previousErr || e;
-            } // keep first error
-            return previousErr;
-        });
+    async _catch(previousErr, fn) {
+        try {
+            await fn();
+        }
+        catch (e) {
+            previousErr = previousErr || e;
+        } // keep first error
+        return previousErr;
     }
-    _withTimeout(promise, ms) {
-        return __awaiter(this, void 0, void 0, function* () {
-            ms = ms || this.config.timeout || 1000;
-            let tid;
-            const timer = new Promise((_, rej) => {
-                tid = setTimeout(() => rej(new TimeoutErr(`Timed out! (${ms} ms)`)), ms);
-            });
-            try {
-                return yield Promise.race([promise(), timer]);
-            }
-            catch (e) {
-                throw e;
-            }
-            finally {
-                clearTimeout(tid);
-            }
+    async _withTimeout(promise, ms) {
+        ms = ms || this.config.timeout || 1000;
+        let tid;
+        const timer = new Promise((_, rej) => {
+            tid = setTimeout(() => rej(new TimeoutErr(`Timed out! (${ms} ms)`)), ms);
         });
+        try {
+            return await Promise.race([promise(), timer]);
+        }
+        catch (e) {
+            throw e;
+        }
+        finally {
+            clearTimeout(tid);
+        }
     }
+    /**
+     * Used in TestRunner.runAll to detect test files. Can be customized if needed...
+     * @type {RegExp}
+     */
+    static testFileRegex = /\.tests?\.([tj]sx?|mjs)$/;
     /**
      * Will run all tests (see `TestRunner.testFileRegex`) under given directories,
      * respecting options
@@ -281,87 +270,80 @@ class TestRunner {
      * @param dirs
      * @param options
      */
-    static runAll(dirs, options = {}) {
-        return __awaiter(this, void 0, void 0, function* () {
-            let { whitelist = [], verbose = false, rootDir = process.cwd(), context = {}, errorExitOnFirstFail = false, enableErrorsSummaryOnNonVerbose = false, exitOnTimeout = false, } = options;
-            if (!Array.isArray(whitelist))
-                whitelist = [whitelist];
-            whitelist = whitelist.map((v) => new RegExp(v, 'i'));
-            whitelist.unshift(new RegExp(TestRunner.testFileRegex, 'i'));
-            const testFiles = ((_dirs) => {
-                // normalize + unique-ize
-                if (!Array.isArray(_dirs))
-                    _dirs = [_dirs];
-                _dirs = [...new Set(_dirs.map(path_1.default.normalize))];
-                const isWhitelisted = (f) => {
-                    for (let i = 0; i < whitelist.length; i++) {
-                        if (!whitelist[i].test(f))
-                            return false;
+    static async runAll(dirs, options = {}) {
+        let { whitelist = [], verbose = false, rootDir = process.cwd(), context = {}, errorExitOnFirstFail = false, enableErrorsSummaryOnNonVerbose = false, exitOnTimeout = false, } = options;
+        if (!Array.isArray(whitelist))
+            whitelist = [whitelist];
+        whitelist = whitelist.map((v) => new RegExp(v, 'i'));
+        whitelist.unshift(new RegExp(TestRunner.testFileRegex, 'i'));
+        const testFiles = ((_dirs) => {
+            // normalize + unique-ize
+            if (!Array.isArray(_dirs))
+                _dirs = [_dirs];
+            _dirs = [...new Set(_dirs.map(path_1.default.normalize))];
+            const isWhitelisted = (f) => {
+                for (let i = 0; i < whitelist.length; i++) {
+                    if (!whitelist[i].test(f))
+                        return false;
+                }
+                return true;
+            };
+            const out = [];
+            for (let dir of _dirs) {
+                (0, index_js_1.totalist)(dir, (name, abs, stats) => {
+                    // hard blacklist check first
+                    if (/node_modules/.test(abs))
+                        return;
+                    // this may not work if provided dirs are outside of rootDir...
+                    const relpath = abs.substr(rootDir.length + 1);
+                    if (isWhitelisted(relpath))
+                        out.push([abs, name]);
+                });
+            }
+            return out;
+        })(dirs);
+        // clear screen only if about to go running
+        const render = new renderer_js_1.Renderer(verbose, !!testFiles.length);
+        let which = [];
+        if (whitelist.length > 1) {
+            which = [...whitelist].splice(1); // remove TestRunner.testFileRegex
+        }
+        render.runAllTitle({ whitelist: which });
+        const totals = { ok: 0, errors: 0, skip: 0, todo: 0, duration: 0 };
+        const invalid = [];
+        let errorDetails = {};
+        let counter = 0;
+        for (let [f, name] of testFiles) {
+            try {
+                // each suite must be exported as default
+                const suite = (await Promise.resolve().then(() => __importStar(require(f)))).default;
+                let { ok, errors, skip, todo, duration, details } = await suite.run(verbose, context, { errorExitOnFirstFail, exitOnTimeout });
+                totals.ok += ok;
+                totals.errors += errors;
+                totals.skip += skip;
+                totals.todo += todo;
+                totals.duration += duration;
+                counter++;
+                errorDetails = details.reduce((memo, d) => {
+                    const { error, label, suiteName } = d;
+                    if (error) {
+                        memo[suiteName] = memo[suiteName] || [];
+                        memo[suiteName].push({ label, error });
                     }
-                    return true;
-                };
-                const out = [];
-                for (let dir of _dirs) {
-                    (0, index_js_1.totalist)(dir, (name, abs, stats) => {
-                        // hard blacklist check first
-                        if (/node_modules/.test(abs))
-                            return;
-                        // this may not work if provided dirs are outside of rootDir...
-                        const relpath = abs.substr(rootDir.length + 1);
-                        if (isWhitelisted(relpath))
-                            out.push([abs, name]);
-                    });
-                }
-                return out;
-            })(dirs);
-            // clear screen only if about to go running
-            const render = new renderer_js_1.Renderer(verbose, !!testFiles.length);
-            let which = [];
-            if (whitelist.length > 1) {
-                which = [...whitelist].splice(1); // remove TestRunner.testFileRegex
+                    return memo;
+                }, errorDetails);
             }
-            render.runAllTitle({ whitelist: which });
-            const totals = { ok: 0, errors: 0, skip: 0, todo: 0, duration: 0 };
-            const invalid = [];
-            let errorDetails = {};
-            let counter = 0;
-            for (let [f, name] of testFiles) {
-                try {
-                    // each suite must be exported as default
-                    const suite = (yield Promise.resolve().then(() => __importStar(require(f)))).default;
-                    let { ok, errors, skip, todo, duration, details } = yield suite.run(verbose, context, { errorExitOnFirstFail, exitOnTimeout });
-                    totals.ok += ok;
-                    totals.errors += errors;
-                    totals.skip += skip;
-                    totals.todo += todo;
-                    totals.duration += duration;
-                    counter++;
-                    errorDetails = details.reduce((memo, d) => {
-                        const { error, label, suiteName } = d;
-                        if (error) {
-                            memo[suiteName] = memo[suiteName] || [];
-                            memo[suiteName].push({ label, error });
-                        }
-                        return memo;
-                    }, errorDetails);
-                }
-                catch (error) {
-                    render.runAllSuiteError({ error, name });
-                    invalid.push({ label: path_1.default.basename(f), error });
-                }
+            catch (error) {
+                render.runAllSuiteError({ error, name });
+                invalid.push({ label: path_1.default.basename(f), error });
             }
-            render.runAllStats({ stats: totals, invalid });
-            // finally, if we're not verbose, still render compact error summary if enabled
-            // prettier-ignore
-            !verbose && enableErrorsSummaryOnNonVerbose && render.runAllErrorsSummary({
-                errorDetails, invalid,
-            });
+        }
+        render.runAllStats({ stats: totals, invalid });
+        // finally, if we're not verbose, still render compact error summary if enabled
+        // prettier-ignore
+        !verbose && enableErrorsSummaryOnNonVerbose && render.runAllErrorsSummary({
+            errorDetails, invalid,
         });
     }
 }
 exports.TestRunner = TestRunner;
-/**
- * Used in TestRunner.runAll to detect test files. Can be customized if needed...
- * @type {RegExp}
- */
-TestRunner.testFileRegex = /\.tests?\.([tj]sx?|mjs)$/;

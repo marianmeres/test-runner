@@ -1,7 +1,7 @@
 import { strict as assert } from 'node:assert';
 import { dirname, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { TestRunner } from "../dist/mjs/index.js";
+import { TestRunner } from '../dist/mjs/index.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -46,4 +46,4 @@ suite.test('Means they must stay fixed', ({ DB }) => {
 	assert(!DB['2']); // assert the touch from above was reset
 });
 
-export default suite
+export default suite;

@@ -1,6 +1,6 @@
 import { green, magenta, red, yellow, cyan, bold, gray, white } from 'kleur/colors';
 import tinydate from 'tinydate';
-import { RenderData } from './index.js';
+import { RenderData } from './test-runner.js';
 
 const T2C = { error: red, test: green, skip: yellow, todo: magenta, warn: yellow };
 

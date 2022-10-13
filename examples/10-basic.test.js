@@ -1,6 +1,6 @@
 import { dirname, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { TestRunner } from "../dist/mjs/index.js";
+import { TestRunner } from '../dist/mjs/index.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);

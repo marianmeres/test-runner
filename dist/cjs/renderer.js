@@ -12,6 +12,7 @@ const TEST = 'test';
 const TODO = 'todo';
 const SKIP = 'skip';
 class Renderer {
+    verbose;
     constructor(verbose = true, clear = false) {
         this.verbose = verbose;
         clear && console.clear();
