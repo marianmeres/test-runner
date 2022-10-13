@@ -99,6 +99,6 @@ which can sometimes lead to unexpected results.
 
 ## Api
 
-Check the [definition](./dist/mjs/index.d.ts)
+Check the [definition](./dist/mjs/test-runner.d.ts)
 [files](./dist/mjs/renderer.d.ts).
 
