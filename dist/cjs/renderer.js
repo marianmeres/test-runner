@@ -4,16 +4,14 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Renderer = void 0;
-const kleur_1 = require("kleur");
 const colors_1 = require("kleur/colors");
 const tinydate_1 = __importDefault(require("tinydate"));
-const T2C = { error: kleur_1.red, test: kleur_1.green, skip: kleur_1.yellow, todo: kleur_1.magenta, warn: kleur_1.yellow };
+const T2C = { error: colors_1.red, test: colors_1.green, skip: colors_1.yellow, todo: colors_1.magenta, warn: colors_1.yellow };
 const ONLY = 'only';
 const TEST = 'test';
 const TODO = 'todo';
 const SKIP = 'skip';
 class Renderer {
-    verbose;
     constructor(verbose = true, clear = false) {
         this.verbose = verbose;
         clear && console.clear();
@@ -91,7 +89,7 @@ class Renderer {
     }
     runAllStats({ stats, invalid }) {
         const title = (0, tinydate_1.default)('[{HH}:{mm}:{ss}] Summary: ')();
-        const warn = invalid.length ? (0, kleur_1.yellow)(` (invalid test files: ${invalid.length})`) : '';
+        const warn = invalid.length ? (0, colors_1.yellow)(` (invalid test files: ${invalid.length})`) : '';
         if (!this.verbose) {
             Renderer.write(''); // extra \n
         }
@@ -101,7 +99,7 @@ class Renderer {
     runAllErrorsSummary({ errorDetails, invalid }) {
         const errors = Object.entries(errorDetails);
         if (errors.length) {
-            Renderer.write((0, kleur_1.red)(`\n    Errors summary`));
+            Renderer.write((0, colors_1.red)(`\n    Errors summary`));
             errors.forEach(([suiteName, list]) => {
                 Renderer.write((0, colors_1.gray)(`\n--> `) + (0, colors_1.white)(suiteName));
                 list.forEach(({ label, error }) => {

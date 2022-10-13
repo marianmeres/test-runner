@@ -1,20 +1,8 @@
 {
-	"include": [
-		"src"
-	],
-	"exclude": [
-		"node_modules"
-	],
+	"extends": "./tsconfig-base.json",
 	"compilerOptions": {
-		"target": "esnext",
-		"module": "commonjs",
-		"rootDir": "src",
-		"outDir": "dist",
-		"esModuleInterop": true,
-		"moduleResolution": "node",
-		"declaration": true,
-		"pretty": true,
-		"skipLibCheck": true,
-		"strict": false
+		"module": "esnext",
+		"outDir": "dist/mjs",
+		"target": "esnext"
 	}
 }

@@ -1,7 +1,11 @@
-const path = require('path');
-const { TestRunner } = require('../dist');
+import { dirname, basename } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { TestRunner } from "../dist/mjs/index.js";
 
-const suite = new TestRunner(path.basename(__filename));
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+const suite = new TestRunner(basename(__filename));
 
 suite.test('Will always pass', () => {});
 
@@ -29,12 +33,4 @@ suite.test('Too late Marlene', async () => {
 	await new Promise((res) => setTimeout(res, 10));
 }, 5);
 
-// run suite if this file is executed directly
-// like python's: if __name__ == "__main__":
-if (require.main === module) {
-	suite.run();
-}
-
-// this is important for `runAll`
-// for ES6: export default suite;
-module.exports = suite;
+export default suite;
