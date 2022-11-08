@@ -4,6 +4,7 @@
   "description": "Simple javascript test runner",
   "main": "dist/mjs/index.js",
   "type": "module",
+  "bin": "./dist/mjs/cli.js",
   "exports": {
     ".": {
       "import": "./dist/mjs/index.js",
@@ -20,7 +21,7 @@
     "clean": "rimraf dist/*",
     "build": "npm run clean && tsc -p tsconfig.json && tsc -p tsconfig-cjs.json && ./post-build.sh",
     "prettier": "prettier --write \"{src,examples}/**/*.{js,ts,json}\"",
-    "release": "node release.cjs"
+    "release": "npx release"
   },
   "repository": {
     "type": "git",
@@ -42,9 +43,9 @@
     "totalist": "^2.0.0"
   },
   "devDependencies": {
+    "@marianmeres/release": "^0.0.7",
     "@types/node": "^14.14.10",
     "minimist": "^1.2.7",
-    "prettier": "^2.2.1",
     "prompt": "^1.3.0",
     "rimraf": "^3.0.2",
     "typescript": "^4.1.2"

@@ -40,8 +40,11 @@ See [examples](examples/) for more.
 
 ## CLI
 
-Standalone CLI is not included, but there is a `TestRunner.runAll` api, so something like
-this should work fine:
+```shell
+npx test-runner [-d some-dir] [-d another-dir]
+```
+
+Or there is a `TestRunner.runAll` api, so something like this should work fine:
 
 ```js
 // tests/index.js
