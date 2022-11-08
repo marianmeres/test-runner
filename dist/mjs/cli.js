@@ -1,7 +1,7 @@
 import { TestRunner } from './test-runner.js';
+import minimist from 'minimist';
 import { bold, gray, red } from 'kleur/colors';
 import fs from 'node:fs';
-import minimist from 'minimist';
 // better safe than sorry...
 if (process.env.NODE_ENV === 'production') {
     console.log(red("ERROR: 'production' env detected. Tests will not run!"));

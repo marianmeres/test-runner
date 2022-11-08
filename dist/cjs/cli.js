@@ -4,9 +4,9 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const test_runner_js_1 = require("./test-runner.js");
+const minimist_1 = __importDefault(require("minimist"));
 const colors_1 = require("kleur/colors");
 const node_fs_1 = __importDefault(require("node:fs"));
-const minimist_1 = __importDefault(require("minimist"));
 // better safe than sorry...
 if (process.env.NODE_ENV === 'production') {
     console.log((0, colors_1.red)("ERROR: 'production' env detected. Tests will not run!"));
