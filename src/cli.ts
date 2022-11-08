@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 import { TestRunner } from './test-runner.js';
 import minimist from 'minimist';
 import { bold, gray, red } from 'kleur/colors';
