@@ -1,6 +1,6 @@
 {
   "name": "@marianmeres/test-runner",
-  "version": "2.0.12",
+  "version": "2.0.13",
   "description": "Simple javascript test runner",
   "main": "dist/mjs/index.js",
   "type": "module",
