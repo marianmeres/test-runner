@@ -16,8 +16,14 @@ if (process.env.NODE_ENV === 'production') {
 }
 //
 const args = (0, minimist_1.default)(process.argv.slice(2));
-const verbose = !!args.v;
+const verbose = !!args.v || !!args.verbose;
 const whitelist = args._.join(' ').trim() || undefined;
+if (args.h || args.help) {
+    console.log(`
+Usage: node ./dist/mjs/cli.js [test-name-filter] [test-name-filter2] [...] [-v|--verbose]
+`);
+    process.exit();
+}
 // console.log(args, verbose, whitelist); process.exit();
 let dirs = args.d || ['./tests', './src'];
 if (!Array.isArray(dirs))
