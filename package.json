@@ -21,7 +21,7 @@
     "clean": "rimraf dist/*",
     "build": "npm run clean && tsc -p tsconfig.json && tsc -p tsconfig-cjs.json && ./post-build.sh",
     "prettier": "prettier --write \"{src,examples}/**/*.{js,ts,json}\"",
-    "release": "npx release"
+    "release": "release"
   },
   "repository": {
     "type": "git",

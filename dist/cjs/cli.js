@@ -20,7 +20,7 @@ const verbose = !!args.v || !!args.verbose;
 const whitelist = args._.join(' ').trim() || undefined;
 if (args.h || args.help) {
     console.log(`
-Usage: node ./dist/mjs/cli.js [test-name-filter] [test-name-filter2] [...] [-v|--verbose]
+--> Usage: node ./dist/mjs/cli.js [test-name-filter] [test-name-filter2] [...] [-v|--verbose]
 `);
     process.exit();
 }
