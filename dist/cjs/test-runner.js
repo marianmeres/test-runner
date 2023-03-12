@@ -271,6 +271,7 @@ class TestRunner {
      * @param options
      */
     static async runAll(dirs, options = {}) {
+        var _a;
         let { whitelist = [], verbose = false, rootDir = process.cwd(), context = {}, errorExitOnFirstFail = false, enableErrorsSummaryOnNonVerbose = false, exitOnTimeout = false, } = options;
         if (!Array.isArray(whitelist))
             whitelist = [whitelist];
@@ -316,7 +317,7 @@ class TestRunner {
         for (let [f, name] of testFiles) {
             try {
                 // each suite must be exported as default
-                const suite = (await Promise.resolve().then(() => __importStar(require(f)))).default;
+                const suite = (await (_a = f, Promise.resolve().then(() => __importStar(require(_a))))).default;
                 let { ok, errors, skip, todo, duration, details } = await suite.run(verbose, context, { errorExitOnFirstFail, exitOnTimeout });
                 totals.ok += ok;
                 totals.errors += errors;

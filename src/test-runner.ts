@@ -329,9 +329,9 @@ export class TestRunner {
 			whitelist: any[];
 			// full vs dotted output
 			verbose: boolean;
-			// this value will be cut of from absolute file paths before applying whitelist match
+			// this value will be cut off from absolute file paths before applying whitelist match
 			rootDir: string;
-			// will be deep-cloned for every test run and passed as and { argument } to testFn
+			// will be deep-cloned for every test run and passed as an { argument } to testFn
 			context: object;
 			// will process.exit(1) on first failed test... might be handy for build pipelines
 			errorExitOnFirstFail: boolean;
