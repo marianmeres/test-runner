@@ -125,13 +125,20 @@ class Renderer {
     }
     // view helpers
     static sanitizeError(e) {
-        return (e || '')
-            .toString()
-            .replace(/^(Error:\s*)/i, '')
-            .replace(process.cwd(), '')
-            .replace(' [ERR_ASSERTION]', '')
-            .replace(/\s\s+/g, ' ')
-            .trim();
+        try {
+            return (e || '')
+                .toString()
+                .replace(/^(Error:\s*)/i, '')
+                .replace(process.cwd(), '')
+                .replace(' [ERR_ASSERTION]', '')
+                .replace(/\s\s+/g, ' ')
+                .trim();
+        }
+        catch (e2) {
+            const m = 'Unable to convert error to string.';
+            console.error((0, colors_1.red)(m), e);
+            return m;
+        }
     }
     static sanitizeStack(stack) {
         return ((stack || '')
