@@ -190,7 +190,9 @@ class TestRunner {
             }
             const beResult = await this._execHook('beforeEach', meta);
             // pass merged context and "beforeEach" result to each testFn
-            await testFn(JSON.parse(JSON.stringify({ ...(context || {}), ...(beResult || {}) })));
+            // await testFn(JSON.parse(JSON.stringify({ ...(context || {}), ...(beResult || {}) })));
+            // CAUTION: this is a shallow merge!
+            await testFn(Object.assign({}, context || {}, beResult || {}));
             results.ok++;
         }
         catch (e) {

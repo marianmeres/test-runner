@@ -129,6 +129,7 @@ export class Renderer {
                 .trim();
         }
         catch (e2) {
+            // hm... this happens if using ts-node
             const m = 'Unable to convert error to string.';
             console.error(red(m), e);
             return m;

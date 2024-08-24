@@ -135,6 +135,7 @@ class Renderer {
                 .trim();
         }
         catch (e2) {
+            // hm... this happens if using ts-node
             const m = 'Unable to convert error to string.';
             console.error((0, colors_1.red)(m), e);
             return m;
