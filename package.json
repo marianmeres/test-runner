@@ -1,6 +1,6 @@
 {
 	"name": "@marianmeres/test-runner",
-	"version": "2.0.16",
+	"version": "2.1.0",
 	"description": "Simple javascript test runner",
 	"type": "module",
 	"bin": "./dist/mjs/cli.js",
